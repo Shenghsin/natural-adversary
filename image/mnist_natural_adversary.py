@@ -1,4 +1,9 @@
-import os, sys
+from search import iterative_search, recursive_search
+from mnist_wgan_inv import MnistWganInv
+import tflib.mnist
+import matplotlib.pyplot as plt
+import os
+import sys
 import pickle
 import numpy as np
 import tensorflow as tf
@@ -8,12 +13,7 @@ from keras.models import load_model
 import matplotlib
 matplotlib.use('Agg')
 matplotlib.rcParams['font.size'] = 12
-import matplotlib.pyplot as plt
 plt.style.use('seaborn-deep')
-
-import tflib.mnist
-from mnist_wgan_inv import MnistWganInv
-from search import iterative_search, recursive_search
 
 
 def save_adversary(adversary, filename):
@@ -67,7 +67,8 @@ if __name__ == '__main__':
 
         def cla_fn(x):
             with graph_CLA.as_default():
-                return np.argmax(classifier.predict_on_batch(np.reshape(x, (-1, 1, 28, 28))), axis=1)
+                return np.argmax(classifier.predict_on_batch(
+                    np.reshape(x, (-1, 1, 28, 28))), axis=1)
 
     else:
         sys.exit('Please choose MNIST classifier: rf OR lenet')
@@ -80,20 +81,22 @@ if __name__ == '__main__':
         saver_GAN = tf.train.import_meta_graph('{}.meta'.format(args.gan_path))
         saver_GAN.restore(sess_GAN, args.gan_path)
 
-
     def gen_fn(z):
         with sess_GAN.as_default():
             with graph_GAN.as_default():
-                x_p = sess_GAN.run(model_GAN.generate(tf.cast(tf.constant(np.asarray(z)), 'float32')))
+                x_p = sess_GAN.run(
+                    model_GAN.generate(
+                        tf.cast(
+                            tf.constant(
+                                np.asarray(z)),
+                            'float32')))
         return x_p
-
 
     def inv_fn(x):
         with sess_GAN.as_default():
             with graph_GAN.as_default():
                 z_p = sess_GAN.run(model_GAN.invert(x))
         return z_p
-
 
     if args.iterative:
         search = iterative_search
@@ -112,9 +115,10 @@ if __name__ == '__main__':
         adversary = search(gen_fn, inv_fn, cla_fn, x, y,
                            nsamples=args.nsamples, step=args.step, verbose=args.verbose)
         if args.iterative:
-            filename = 'mnist_{}_iterative_{}.png'.format(str(i).zfill(4), args.classifier)
+            filename = 'mnist_{}_iterative_{}.png'.format(
+                str(i).zfill(4), args.classifier)
         else:
-            filename = 'mnist_{}_recursive_{}.png'.format(str(i).zfill(4), args.classifier)
+            filename = 'mnist_{}_recursive_{}.png'.format(
+                str(i).zfill(4), args.classifier)
 
         save_adversary(adversary, os.path.join(args.output_path, filename))
-

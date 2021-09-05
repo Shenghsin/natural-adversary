@@ -1,24 +1,24 @@
-import os, sys, time
+import tflib.ops.linear
+import tflib.ops.deconv2d
+import tflib.ops.conv2d
+import tflib.ops.batchnorm
+import tflib.save_images
+import tflib.plot
+import tflib.mnist
+import tflib
+import argparse
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+import os
+import sys
+import time
 sys.path.append(os.getcwd())
 
-import matplotlib
 matplotlib.use('Agg')
 matplotlib.rcParams['font.size'] = 12
-import matplotlib.pyplot as plt
 plt.style.use('seaborn-deep')
-
-import numpy as np
-import tensorflow as tf
-import argparse
-
-import tflib
-import tflib.mnist
-import tflib.plot
-import tflib.save_images
-import tflib.ops.batchnorm
-import tflib.ops.conv2d
-import tflib.ops.deconv2d
-import tflib.ops.linear
 
 
 class MnistWganInv(object):
@@ -48,14 +48,23 @@ class MnistWganInv(object):
         self.gen_cost = -tf.reduce_mean(self.dis_x_p)
 
         self.inv_cost = tf.reduce_mean(tf.square(self.x - self.rec_x))
-        self.inv_cost += self.lamda * tf.reduce_mean(tf.square(self.z - self.rec_z))
+        self.inv_cost += self.lamda * \
+            tf.reduce_mean(tf.square(self.z - self.rec_z))
 
-        self.dis_cost = tf.reduce_mean(self.dis_x_p) - tf.reduce_mean(self.dis_x)
+        self.dis_cost = tf.reduce_mean(
+            self.dis_x_p) - tf.reduce_mean(self.dis_x)
 
-        alpha = tf.random_uniform(shape=[self.batch_size, 1], minval=0., maxval=1.)
+        alpha = tf.random_uniform(
+            shape=[
+                self.batch_size,
+                1],
+            minval=0.,
+            maxval=1.)
         difference = self.x_p - self.x
         interpolate = self.x + alpha * difference
-        gradient = tf.gradients(self.discriminate(interpolate), [interpolate])[0]
+        gradient = tf.gradients(
+            self.discriminate(interpolate),
+            [interpolate])[0]
         slope = tf.sqrt(tf.reduce_sum(tf.square(gradient), axis=1))
         gradient_penalty = tf.reduce_mean((slope - 1.) ** 2)
         self.dis_cost += self.c_gp_x * gradient_penalty
@@ -180,7 +189,7 @@ class MnistWganInv(object):
         reconstructions = sess.run(self.rec_x, feed_dict={self.x: images})
         comparison = np.zeros((images.shape[0] * 2, images.shape[1]),
                               dtype=np.float32)
-        for i in xrange(images.shape[0]):
+        for i in range(images.shape[0]):
             comparison[2 * i] = images[i]
             comparison[2 * i + 1] = reconstructions[i]
         tflib.save_images.save_images(
@@ -191,7 +200,11 @@ class MnistWganInv(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=80, help='batch size')
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        default=80,
+        help='batch size')
     parser.add_argument('--z_dim', type=int, default=64, help='dimension of z')
     parser.add_argument('--latent_dim', type=int, default=64,
                         help='latent dimension')
@@ -207,9 +220,9 @@ if __name__ == '__main__':
                         help='output path')
     args = parser.parse_args()
 
-
     # dataset iterator
-    train_gen, dev_gen, test_gen = tflib.mnist.load(args.batch_size, args.batch_size)
+    train_gen, dev_gen, test_gen = tflib.mnist.load(
+        args.batch_size, args.batch_size)
 
     def inf_train_gen():
         while True:
@@ -239,10 +252,14 @@ if __name__ == '__main__':
         for iteration in range(args.iterations):
             for i in range(args.dis_iter):
                 noise = np.random.randn(args.batch_size, args.z_dim)
-                images = inf_train_gen().next()
+                images = next(inf_train_gen())
 
-                dis_cost_lst += [mnistWganInv.train_dis(session, images, noise)]
-                inv_cost_lst += [mnistWganInv.train_inv(session, images, noise)]
+                dis_cost_lst += [
+                    mnistWganInv.train_dis(
+                        session, images, noise)]
+                inv_cost_lst += [
+                    mnistWganInv.train_inv(
+                        session, images, noise)]
 
             gen_cost = mnistWganInv.train_gen(session, images, noise)
             dis_cost = np.mean(dis_cost_lst)
@@ -253,8 +270,10 @@ if __name__ == '__main__':
             tflib.plot.plot('train inv cost', inv_cost)
 
             if iteration % 100 == 99:
-                mnistWganInv.generate_from_noise(session, fixed_noise, iteration)
-                mnistWganInv.reconstruct_images(session, fixed_images, iteration)
+                mnistWganInv.generate_from_noise(
+                    session, fixed_noise, iteration)
+                mnistWganInv.reconstruct_images(
+                    session, fixed_images, iteration)
 
             if iteration % 1000 == 999:
                 save_path = saver.save(session, os.path.join(
@@ -277,5 +296,3 @@ if __name__ == '__main__':
                 tflib.plot.flush(os.path.join(args.output_path, 'models'))
 
             tflib.plot.tick()
-
-
